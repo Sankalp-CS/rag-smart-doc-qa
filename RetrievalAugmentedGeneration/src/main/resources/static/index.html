@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SmartDoc — Chat</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#0d0f14;
+  --sidebar:#0a0c10;
+  --surface:#13161e;
+  --surface2:#1a1e28;
+  --border:rgba(255,255,255,0.06);
+  --border2:rgba(255,255,255,0.1);
+  --accent:#5fffca;
+  --accent2:#4db8ff;
+  --accent-glow:rgba(95,255,202,0.15);
+  --user-bubble:#1e2d3d;
+  --user-border:rgba(77,184,255,0.25);
+  --ai-bubble:#141820;
+  --text:#dfe3ec;
+  --text2:#8b92a5;
+  --text3:#555d6e;
+  --danger:#ff6b7a;
+  --radius:14px;
+  --font:'Outfit',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  --sidebar-w:260px;
+}
+
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px}
+
+/* ═══════════════════ LAYOUT ═══════════════════ */
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* ═══════════════════ SIDEBAR ═══════════════════ */
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;
+  background:var(--sidebar);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  transition:transform 0.25s ease;
+}
+
+.sidebar-top{
+  padding:18px 14px 12px;
+  border-bottom:1px solid var(--border);
+}
+
+.brand{
+  display:flex;align-items:center;gap:9px;
+  padding:6px 8px 14px;
+}
+.brand-icon{
+  width:30px;height:30px;border-radius:8px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;flex-shrink:0;
+}
+.brand-name{font-size:15px;font-weight:700;letter-spacing:-0.01em}
+.brand-sub{font-size:10px;color:var(--text3);font-weight:400;letter-spacing:0.06em;text-transform:uppercase}
+
+.new-chat-btn{
+  width:100%;padding:9px 12px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:9px;
+  color:var(--text);font-family:var(--font);font-size:13px;font-weight:500;
+  cursor:pointer;display:flex;align-items:center;gap:8px;
+  transition:all 0.15s;
+}
+.new-chat-btn:hover{background:var(--surface2);border-color:rgba(95,255,202,0.3);color:var(--accent)}
+.new-chat-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* Upload section in sidebar */
+.sidebar-upload{
+  margin:10px 14px;
+  padding:12px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+}
+.sidebar-upload-label{
+  font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:5px;
+}
+.drop-mini{
+  border:1.5px dashed rgba(95,255,202,0.2);
+  border-radius:8px;padding:12px 8px;text-align:center;
+  cursor:pointer;transition:all 0.2s;position:relative;
+  font-size:12px;color:var(--text2);
+}
+.drop-mini:hover,.drop-mini.over{border-color:var(--accent);background:var(--accent-glow)}
+.drop-mini input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.drop-mini .di{font-size:20px;margin-bottom:4px}
+.file-tag{
+  display:none;margin-top:8px;
+  background:rgba(95,255,202,0.07);
+  border:1px solid rgba(95,255,202,0.15);
+  border-radius:6px;padding:6px 8px;
+  font-size:11px;align-items:center;gap:6px;
+}
+.file-tag.on{display:flex}
+.file-tag-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accent)}
+.upload-btn{
+  width:100%;margin-top:8px;padding:8px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border:none;border-radius:7px;
+  font-family:var(--font);font-size:12px;font-weight:600;
+  color:#0d0f14;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:all 0.15s;
+}
+.upload-btn:hover{opacity:0.85;transform:translateY(-1px)}
+.upload-btn:disabled{opacity:0.3;cursor:not-allowed;transform:none}
+.upload-status{
+  display:none;margin-top:7px;font-size:11px;padding:6px 8px;border-radius:6px;
+  align-items:center;gap:5px;
+}
+.upload-status.ok{display:flex;background:rgba(95,255,202,0.08);color:var(--accent);border:1px solid rgba(95,255,202,0.2)}
+.upload-status.err{display:flex;background:rgba(255,107,122,0.08);color:var(--danger);border:1px solid rgba(255,107,122,0.2)}
+
+/* History list */
+.history-section{flex:1;overflow-y:auto;padding:10px 14px}
+.history-section::-webkit-scrollbar{width:3px}
+.history-section::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+.history-title{
+  font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--text3);padding:4px 4px 8px;
+}
+.history-item{
+  padding:9px 10px;border-radius:8px;
+  font-size:12.5px;font-weight:400;color:var(--text2);
+  cursor:pointer;transition:all 0.14s;
+  display:flex;align-items:flex-start;gap:7px;
+  margin-bottom:2px;position:relative;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.history-item:hover{background:var(--surface);color:var(--text)}
+.history-item.active{background:var(--surface2);color:var(--text)}
+.history-item .hi-icon{font-size:12px;flex-shrink:0;padding-top:1px}
+.history-item .del-btn{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  display:none;background:none;border:none;cursor:pointer;
+  color:var(--text3);font-size:14px;padding:2px 4px;border-radius:4px;
+}
+.history-item:hover .del-btn{display:flex}
+.history-item .del-btn:hover{color:var(--danger)}
+.history-empty{font-size:12px;color:var(--text3);padding:8px 4px;text-align:center;line-height:1.7}
+
+/* ═══════════════════ MAIN AREA ═══════════════════ */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+
+/* Top bar */
+.topbar{
+  padding:14px 20px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;
+  background:rgba(13,15,20,0.85);
+  backdrop-filter:blur(10px);
+  flex-shrink:0;z-index:10;
+}
+.topbar-title{font-size:14px;font-weight:600;flex:1}
+.topbar-doc{
+  font-size:11px;padding:4px 10px;border-radius:20px;
+  background:rgba(95,255,202,0.08);color:var(--accent);
+  border:1px solid rgba(95,255,202,0.2);
+  max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  display:none;
+}
+.topbar-doc.show{display:block}
+.menu-btn{
+  display:none;background:none;border:none;cursor:pointer;
+  color:var(--text2);padding:4px;
+}
+
+/* Chat messages */
+.chat-area{
+  flex:1;overflow-y:auto;
+  padding:28px 0;
+  scroll-behavior:smooth;
+}
+.chat-area::-webkit-scrollbar{width:4px}
+.chat-area::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+
+.msg-row{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:8px 24px;max-width:820px;margin:0 auto;width:100%;
+  animation:msgIn 0.3s ease both;
+}
+@keyframes msgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+.msg-row.user{flex-direction:row-reverse}
+
+.avatar{
+  width:32px;height:32px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;margin-top:2px;
+}
+.avatar.ai{background:linear-gradient(135deg,var(--accent),var(--accent2));font-size:16px}
+.avatar.user{background:var(--user-bubble);border:1px solid var(--user-border);font-size:13px}
+
+.bubble{
+  max-width:72%;padding:12px 16px;
+  border-radius:var(--radius);
+  font-size:14px;line-height:1.75;font-weight:400;
+}
+.bubble.ai{
+  background:var(--ai-bubble);
+  border:1px solid var(--border);
+  border-top-left-radius:4px;
+  color:var(--text);
+}
+.bubble.user{
+  background:var(--user-bubble);
+  border:1px solid var(--user-border);
+  border-top-right-radius:4px;
+  color:var(--text);
+}
+
+/* Thinking / loading bubble */
+.thinking{
+  display:flex;align-items:center;gap:5px;
+  padding:14px 16px;
+}
+.dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--accent);opacity:0.4;
+  animation:dotPulse 1.4s ease-in-out infinite;
+}
+.dot:nth-child(2){animation-delay:0.2s}
+.dot:nth-child(3){animation-delay:0.4s}
+@keyframes dotPulse{0%,80%,100%{transform:scale(0.8);opacity:0.3}40%{transform:scale(1.2);opacity:1}}
+
+/* Typing cursor */
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.cursor{display:inline-block;width:2px;height:0.9em;background:var(--accent);vertical-align:middle;animation:blink 0.9s ease infinite;margin-left:2px}
+
+/* Welcome screen */
+.welcome{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex:1;text-align:center;padding:40px 20px;
+  animation:fadeIn 0.5s ease both;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.welcome-icon{font-size:48px;margin-bottom:18px}
+.welcome h2{font-size:22px;font-weight:700;margin-bottom:8px}
+.welcome p{color:var(--text2);font-size:14px;max-width:380px;line-height:1.7}
+.welcome-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:24px}
+.chip{
+  padding:8px 14px;border-radius:20px;
+  font-size:12.5px;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border2);
+  color:var(--text2);transition:all 0.15s;
+}
+.chip:hover{border-color:rgba(95,255,202,0.4);color:var(--accent);background:var(--accent-glow)}
+
+/* Input bar */
+.input-bar{
+  padding:14px 20px 18px;
+  border-top:1px solid var(--border);
+  background:rgba(13,15,20,0.92);
+  backdrop-filter:blur(10px);
+  flex-shrink:0;
+}
+.input-wrap{
+  display:flex;align-items:flex-end;gap:10px;
+  max-width:820px;margin:0 auto;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:13px;
+  padding:10px 10px 10px 16px;
+  transition:border-color 0.2s;
+}
+.input-wrap:focus-within{border-color:rgba(95,255,202,0.35)}
+.input-wrap textarea{
+  flex:1;background:none;border:none;outline:none;resize:none;
+  color:var(--text);font-family:var(--font);font-size:14px;font-weight:400;
+  min-height:24px;max-height:160px;line-height:1.6;
+}
+.input-wrap textarea::placeholder{color:var(--text3)}
+.send-btn{
+  width:36px;height:36px;border-radius:8px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.15s;
+}
+.send-btn:hover{opacity:0.82;transform:translateY(-1px);box-shadow:0 4px 16px rgba(95,255,202,0.3)}
+.send-btn:disabled{opacity:0.25;cursor:not-allowed;transform:none;box-shadow:none}
+.send-btn svg{width:17px;height:17px;fill:#0d0f14}
+.input-hint{font-size:11px;color:var(--text3);text-align:center;margin-top:7px;max-width:820px;margin-inline:auto}
+
+/* Noise overlay */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:999;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+}
+
+/* Scrollbar global */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+
+/* ─── Responsive ─── */
+@media(max-width:640px){
+  .sidebar{position:fixed;left:0;top:0;height:100%;z-index:100;transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .menu-btn{display:flex}
+  .sidebar-overlay{display:block}
+}
+.sidebar-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-top">
+      <div class="brand">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <div class="brand-name">SmartDoc</div>
+          <div class="brand-sub">RAG · Spring AI</div>
+        </div>
+      </div>
+      <button class="new-chat-btn" onclick="newChat()">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Chat
+      </button>
+    </div>
+
+    <!-- Upload -->
+    <div class="sidebar-upload">
+      <div class="sidebar-upload-label">📄 Document</div>
+      <div class="drop-mini" id="dropMini">
+        <input type="file" id="fileInput" accept=".pdf,.txt,.docx,.md"/>
+        <div class="di">☁️</div>
+        <div>Click or drag &amp; drop</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">PDF · TXT · DOCX · MD</div>
+      </div>
+      <div class="file-tag" id="fileTag">
+        <span>📎</span>
+        <span class="file-tag-name" id="fileName"></span>
+        <span style="font-size:10px;color:var(--text3)" id="fileSize"></span>
+      </div>
+      <button class="upload-btn" id="uploadBtn" onclick="uploadFile()" disabled>
+        <span id="uploadBtnTxt">Upload</span>
+      </button>
+      <div class="upload-status" id="uploadStatus"></div>
+    </div>
+
+    <!-- History -->
+    <div class="history-section">
+      <div class="history-title">Chat History</div>
+      <div id="historyList"><div class="history-empty">No chats yet.<br/>Upload a doc and start asking!</div></div>
+    </div>
+
+  </aside>
+
+  <div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+
+    <div class="topbar">
+      <button class="menu-btn" onclick="toggleSidebar()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div class="topbar-title" id="topbarTitle">New Chat</div>
+      <div class="topbar-doc" id="topbarDoc"></div>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+      <!-- Welcome state -->
+      <div class="welcome" id="welcome">
+        <div class="welcome-icon">🧠</div>
+        <h2>Ask your documents anything</h2>
+        <p>Upload a PDF, text file, or Word doc using the sidebar, then start a conversation about its contents.</p>
+        <div class="welcome-chips">
+          <div class="chip" onclick="chipClick(this)">Summarize this document</div>
+          <div class="chip" onclick="chipClick(this)">What are the key points?</div>
+          <div class="chip" onclick="chipClick(this)">List the main topics</div>
+          <div class="chip" onclick="chipClick(this)">Explain the conclusions</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <div class="input-wrap">
+        <textarea id="qInput" placeholder="Ask something about your document…" rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a1 1 0 00-1.39.91L2 9.12a1 1 0 00.85.99L17 12 2.85 13.89a1 1 0 00-.85.99l.01 4.6a1 1 0 001.39.92z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="input-hint">Enter to send · Shift+Enter for new line</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
+let sessions = JSON.parse(localStorage.getItem('rag_sessions') || '[]');
+let currentId = null;
+let docName   = localStorage.getItem('rag_doc') || null;
+let isLoading = false;
+
+/* ════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════ */
+(function init(){
+  if(docName) showDocBadge(docName);
+  renderHistory();
+  if(sessions.length > 0) loadSession(sessions[0].id);
+})();
+
+/* ════════════════════════════════════════════
+   SESSION MANAGEMENT
+════════════════════════════════════════════ */
+function newChat(){
+  currentId = null;
+  clearChat();
+  renderHistory();
+  document.getElementById('topbarTitle').textContent = 'New Chat';
+  closeSidebar();
+}
+
+function createSession(firstQ){
+  const id = Date.now().toString();
+  const s = { id, title: firstQ.slice(0,40) + (firstQ.length>40?'…':''), messages:[] };
+  sessions.unshift(s);
+  currentId = id;
+  saveAll();
+  renderHistory();
+  return s;
+}
+
+function getSession(){ return sessions.find(s=>s.id===currentId) }
+
+function loadSession(id){
+  currentId = id;
+  const s = sessions.find(s=>s.id===id);
+  if(!s) return;
+  clearChat();
+  document.getElementById('topbarTitle').textContent = s.title;
+  s.messages.forEach(m => appendBubble(m.role, m.text, false));
+  scrollBottom();
+  renderHistory();
+  closeSidebar();
+}
+
+function deleteSession(id){
+  sessions = sessions.filter(s=>s.id!==id);
+  saveAll();
+  if(currentId===id){ currentId=null; clearChat(); }
+  renderHistory();
+}
+
+function saveAll(){ localStorage.setItem('rag_sessions', JSON.stringify(sessions)); }
+
+/* ════════════════════════════════════════════
+   RENDER HISTORY
+════════════════════════════════════════════ */
+function renderHistory(){
+  const el = document.getElementById('historyList');
+  if(sessions.length===0){
+    el.innerHTML='<div class="history-empty">No chats yet.<br/>Upload a doc and start asking!</div>';
+    return;
+  }
+  el.innerHTML = sessions.map(s=>`
+    <div class="history-item ${s.id===currentId?'active':''}" onclick="loadSession('${s.id}')">
+      <span class="hi-icon">💬</span>
+      <span style="overflow:hidden;text-overflow:ellipsis">${esc(s.title)}</span>
+      <button class="del-btn" onclick="event.stopPropagation();deleteSession('${s.id}')" title="Delete">✕</button>
+    </div>
+  `).join('');
+}
+
+/* ════════════════════════════════════════════
+   CHAT UI
+════════════════════════════════════════════ */
+function clearChat(){
+  const ca = document.getElementById('chatArea');
+  ca.innerHTML = `<div class="welcome" id="welcome">
+    <div class="welcome-icon">🧠</div>
+    <h2>Ask your documents anything</h2>
+    <p>Upload a PDF, text file, or Word doc using the sidebar, then start a conversation about its contents.</p>
+    <div class="welcome-chips">
+      <div class="chip" onclick="chipClick(this)">Summarize this document</div>
+      <div class="chip" onclick="chipClick(this)">What are the key points?</div>
+      <div class="chip" onclick="chipClick(this)">List the main topics</div>
+      <div class="chip" onclick="chipClick(this)">Explain the conclusions</div>
+    </div>
+  </div>`;
+}
+
+function hideWelcome(){
+  const w = document.getElementById('welcome');
+  if(w) w.remove();
+}
+
+function appendBubble(role, text, animate=true){
+  const ca = document.getElementById('chatArea');
+  const row = document.createElement('div');
+  row.className = `msg-row ${role}`;
+  if(!animate) row.style.animation='none';
+
+  const avatar = document.createElement('div');
+  avatar.className = `avatar ${role}`;
+  avatar.textContent = role==='ai' ? '⚡' : '👤';
+
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${role}`;
+  bubble.textContent = text;
+
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  ca.appendChild(row);
+  scrollBottom();
+  return bubble;
+}
+
+function appendThinking(){
+  const ca = document.getElementById('chatArea');
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.id = 'thinkingRow';
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar ai';
+  avatar.textContent = '⚡';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble ai thinking';
+  bubble.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  ca.appendChild(row);
+  scrollBottom();
+}
+
+function removeThinking(){
+  const t = document.getElementById('thinkingRow');
+  if(t) t.remove();
+}
+
+function typeIntoBubble(bubble, text){
+  return new Promise(res=>{
+    bubble.innerHTML = '';
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    bubble.appendChild(cursor);
+    let i=0;
+    const iv = setInterval(()=>{
+      if(i<text.length){
+        cursor.insertAdjacentText('beforebegin',text[i++]);
+        if(i%8===0) scrollBottom();
+      } else {
+        clearInterval(iv);
+        cursor.remove();
+        res();
+      }
+    },10);
+  });
+}
+
+function scrollBottom(){
+  const ca = document.getElementById('chatArea');
+  ca.scrollTop = ca.scrollHeight;
+}
+
+/* ════════════════════════════════════════════
+   SEND MESSAGE
+════════════════════════════════════════════ */
+async function sendMessage(){
+  if(isLoading) return;
+  const input = document.getElementById('qInput');
+  const q = input.value.trim();
+  if(!q) return;
+
+  input.value='';
+  input.style.height='auto';
+
+  hideWelcome();
+
+  // Create session if needed
+  if(!currentId){
+    createSession(q);
+    document.getElementById('topbarTitle').textContent = q.slice(0,40)+(q.length>40?'…':'');
+  }
+
+  // User bubble
+  const s = getSession();
+  appendBubble('user', q);
+  s.messages.push({role:'user',text:q});
+
+  // Loading
+  isLoading=true;
+  document.getElementById('sendBtn').disabled=true;
+  appendThinking();
+
+  try{
+    const res = await fetch("http://localhost:8080/api/ask?fileName=uml.pdf", {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(q)
+    });
+    if(!res.ok) throw new Error('Bad response');
+    const answer = await res.text();
+
+    removeThinking();
+    const bubble = appendBubble('ai','');
+    await typeIntoBubble(bubble, answer);
+    s.messages.push({role:'ai',text:answer});
+    saveAll();
+  } catch(e){
+    removeThinking();
+    const bubble = appendBubble('ai','');
+    bubble.innerHTML = `<span style="color:var(--danger)">❌ Could not reach backend. Make sure your Spring Boot server is running on port 8080.</span>`;
+    s.messages.push({role:'ai',text:'[Error: backend unreachable]'});
+    saveAll();
+  }
+
+  isLoading=false;
+  document.getElementById('sendBtn').disabled=false;
+}
+
+/* ════════════════════════════════════════════
+   UPLOAD
+════════════════════════════════════════════ */
+const fileInput = document.getElementById('fileInput');
+const dropMini  = document.getElementById('dropMini');
+
+fileInput.addEventListener('change',()=>pickFile(fileInput.files[0]));
+dropMini.addEventListener('dragover',e=>{e.preventDefault();dropMini.classList.add('over')});
+dropMini.addEventListener('dragleave',()=>dropMini.classList.remove('over'));
+dropMini.addEventListener('drop',e=>{
+  e.preventDefault();dropMini.classList.remove('over');
+  const f=e.dataTransfer.files[0];
+  if(f){fileInput.files=e.dataTransfer.files;pickFile(f);}
+});
+
+function pickFile(f){
+  if(!f) return;
+  document.getElementById('fileName').textContent=f.name;
+  document.getElementById('fileSize').textContent=fmt(f.size);
+  document.getElementById('fileTag').classList.add('on');
+  document.getElementById('uploadBtn').disabled=false;
+}
+
+async function uploadFile(){
+  const f=fileInput.files[0]; if(!f) return;
+  const btn=document.getElementById('uploadBtn');
+  const stat=document.getElementById('uploadStatus');
+  btn.disabled=true;
+  document.getElementById('uploadBtnTxt').innerHTML='<span style="display:inline-block;width:11px;height:11px;border:2px solid rgba(13,15,20,0.3);border-top-color:#0d0f14;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle"></span> Uploading…';
+  stat.className='upload-status';
+  try{
+    const fd=new FormData(); fd.append('file',f);
+    const r=await fetch('http://localhost:8080/api/upload',{method:'POST',body:fd});
+    if(!r.ok) throw 0;
+    docName=f.name;
+    localStorage.setItem('rag_doc',docName);
+    showDocBadge(docName);
+    stat.className='upload-status ok';
+    stat.innerHTML='✅ Indexed & ready';
+  } catch(e){
+    stat.className='upload-status err';
+    stat.innerHTML='❌ Upload failed';
+  }
+  document.getElementById('uploadBtnTxt').textContent='Upload';
+  btn.disabled=false;
+}
+
+function showDocBadge(name){
+  const b=document.getElementById('topbarDoc');
+  b.textContent='📄 '+name;
+  b.classList.add('show');
+}
+
+/* ════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════ */
+function chipClick(el){
+  document.getElementById('qInput').value=el.textContent;
+  sendMessage();
+}
+function handleKey(e){
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}
+}
+function autoResize(el){
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,160)+'px';
+}
+function fmt(b){
+  if(b<1024) return b+' B';
+  if(b<1048576) return (b/1024).toFixed(1)+' KB';
+  return (b/1048576).toFixed(1)+' MB';
+}
+function esc(s){ const d=document.createElement('div');d.textContent=s;return d.innerHTML; }
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').style.display='block'}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').style.display='none'}
+
+/* spin keyframe for upload btn */
+const style=document.createElement('style');
+style.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
+document.head.appendChild(style);
+</script>
+</body>
+</html>
