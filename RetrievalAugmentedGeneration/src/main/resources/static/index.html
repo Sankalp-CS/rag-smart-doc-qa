@@ -342,10 +342,10 @@ body::after{
     <div class="sidebar-upload">
       <div class="sidebar-upload-label">📄 Document</div>
       <div class="drop-mini" id="dropMini">
-        <input type="file" id="fileInput" accept=".pdf,.txt,.docx,.md"/>
+        <input type="file" id="fileInput" accept=".pdf"/>
         <div class="di">☁️</div>
         <div>Click or drag &amp; drop</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">PDF · TXT · DOCX · MD</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">PDF only</div>
       </div>
       <div class="file-tag" id="fileTag">
         <span>📎</span>
@@ -386,7 +386,7 @@ body::after{
       <div class="welcome" id="welcome">
         <div class="welcome-icon">🧠</div>
         <h2>Ask your documents anything</h2>
-        <p>Upload a PDF, text file, or Word doc using the sidebar, then start a conversation about its contents.</p>
+        <p>Upload a PDF using the sidebar, then start a conversation about its contents.</p>
         <div class="welcome-chips">
           <div class="chip" onclick="chipClick(this)">Summarize this document</div>
           <div class="chip" onclick="chipClick(this)">What are the key points?</div>
@@ -500,7 +500,7 @@ function clearChat(){
   ca.innerHTML = `<div class="welcome" id="welcome">
     <div class="welcome-icon">🧠</div>
     <h2>Ask your documents anything</h2>
-    <p>Upload a PDF, text file, or Word doc using the sidebar, then start a conversation about its contents.</p>
+    <p>Upload a PDF using the sidebar, then start a conversation about its contents.</p>
     <div class="welcome-chips">
       <div class="chip" onclick="chipClick(this)">Summarize this document</div>
       <div class="chip" onclick="chipClick(this)">What are the key points?</div>
@@ -617,10 +617,20 @@ async function sendMessage(){
   appendThinking();
 
   try{
-    const res = await fetch("http://localhost:8080/api/ask?fileName=uml.pdf", {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(q)
+    // FIX 1: Use the actual uploaded file name, not a hardcoded value
+    if (!docName) {
+      removeThinking();
+      const bubble = appendBubble('ai', '');
+      bubble.innerHTML = `<span style="color:var(--danger)">⚠️ Please upload a document first before asking questions.</span>`;
+      isLoading = false;
+      document.getElementById('sendBtn').disabled = false;
+      return;
+    }
+
+    const res = await fetch(`http://localhost:8080/api/ask?fileName=${encodeURIComponent(docName)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(q)
     });
     if(!res.ok) throw new Error('Bad response');
     const answer = await res.text();

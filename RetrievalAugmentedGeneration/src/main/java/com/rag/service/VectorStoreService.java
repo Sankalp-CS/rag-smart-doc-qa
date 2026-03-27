@@ -1,11 +1,12 @@
 package com.rag.service;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
-//import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,28 +15,40 @@ public class VectorStoreService {
 
     @Autowired
     private VectorStore vectorStore;
+    
+    
 
-    // ✅ Store chunks
+    // 🔹 Store with metadata (fileName)
     public void store(List<String> chunks, String fileName) {
 
-        List<Document> docs = chunks.stream()
+        List<Document> documents = chunks.stream()
                 .map(chunk -> {
                     Document doc = new Document(chunk);
-                    doc.getMetadata().put("fileName", fileName);
+                    doc.getMetadata().put("fileName", fileName); // ✅ IMPORTANT
                     return doc;
                 })
                 .toList();
 
-        vectorStore.add(docs);
+        vectorStore.add(documents);
+
+        System.out.println("Stored " + documents.size() + " chunks for file: " + fileName);
     }
 
-    // ✅ Search similar chunks (IMPROVED)
+    // 🔹 Search with file filter
     public List<Document> search(String query, String fileName) {
 
-        List<Document> results = vectorStore.similaritySearch(query);
+        List<Document> results = vectorStore.similaritySearch(
+                SearchRequest.query(query)
+                        .withTopK(5)
+                        .withFilterExpression("fileName == '" + fileName + "'")
+        );
 
-        return results.stream()
-                .filter(doc -> fileName.equals(doc.getMetadata().get("fileName")))
-                .toList();
+        // Debug
+        System.out.println("\n===== CONTEXT =====");
+        results.forEach(doc -> System.out.println(doc.getContent()));
+        System.out.println("===================\n");
+
+        return results;
     }
+
 }

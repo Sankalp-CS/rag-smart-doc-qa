@@ -1,9 +1,10 @@
 package com.rag.controller;
-
 import java.io.IOException;
 import java.util.List;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -44,14 +45,20 @@ public class DocumentController {
     public String askQuestion(@RequestParam String fileName,
                               @RequestBody String question) {
 
-        var docs = vectorStoreService.search(question, fileName);
+        List<Document> docs = vectorStoreService.search(question, fileName);
 
-        String context = docs.stream()
-                .map(doc -> doc.getContent())
-                .reduce("", (a, b) -> a + "\n" + b);
+        StringBuilder contextBuilder = new StringBuilder();
 
-        String prompt = "Use the context to answer.\n\n" +
-                context +
+        for (Document doc : docs) {
+            contextBuilder.append(doc.getContent()).append("\n");
+        }
+
+        String context = contextBuilder.toString();
+
+        String prompt = "You are an AI assistant.\n" +
+                "Answer ONLY using the provided context.\n" +
+                "If the answer is not in the context, say 'Not found in document'.\n\n" +
+                "Context:\n" + context +
                 "\n\nQuestion: " + question;
 
         return chatClient.prompt()
@@ -59,4 +66,14 @@ public class DocumentController {
                 .call()
                 .content();
     }
+//    public void deleteByFileName(String fileName) {
+//        try {
+//            FilterExpressionBuilder b = new FilterExpressionBuilder();
+//            vectorStoreService.delete(List.of(b.eq("fileName", fileName).build().toString()));
+//            System.out.println("Deleted existing chunks for: " + fileName);
+//        } catch (Exception e) {
+//            // If no chunks exist yet, deletion is a no-op — safe to ignore
+//            System.out.println("No existing chunks found for: " + fileName + " (skipping delete)");
+//        }
+//    }
 }
